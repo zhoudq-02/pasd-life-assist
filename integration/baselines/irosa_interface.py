@@ -1,14 +1,14 @@
-"""IROSA interface comparison ONLY (validated parameterized KMP tools + protective abstraction layer). Not a performance baseline; excluded from the SR main table.
+"""IROSA interface comparison ONLY (validated parameterized KMP tools + protective layer).
 
-Table: C1 | proxy | requires_training=False
+Table: C1 | proxy | requires_training=False | excluded from the SR main table
 Contract: docs/03 section 3.
-TODO(scaffold): implement the mechanism-equivalent behaviour described above;
-keep the MemoryPlugin signature and the six snapshot fields unchanged.
 """
 from __future__ import annotations
 
 from src.pasd_life.schema import RepairHint, SceneContext, StepFeedback, Trace
 from .base import base_snapshot
+
+KMP_TOOLS = ("insert", "peg_in_hole", "screw", "place")
 
 
 class IROSAInterface:
@@ -25,19 +25,18 @@ class IROSAInterface:
         self.config = kwargs
 
     def retrieve(self, ctx: SceneContext) -> list[RepairHint]:
-        # TODO(scaffold)
-        return []
+        # Interface comparison only: expose the validated, parameterized KMP tools.
+        return [RepairHint(text=f"validated KMP tools: {', '.join(KMP_TOOLS)}",
+                           executable=None, verified=True, verified_by="none",
+                           source="irosa_interface")]
 
     def on_episode_end(self, trace: Trace) -> None:
-        # TODO(scaffold)
-        return None
+        return None  # interface-only: no experience memory
 
     def on_step_end(self, feedback: StepFeedback) -> None:
-        # TODO(scaffold) or intentionally no-op
         return None
 
     def snapshot(self) -> dict:
-        return base_snapshot(library_size=len(self.items), verified=self.verified,
-                             requires_training=False,
+        return base_snapshot(library_size=0, verified=0, requires_training=False,
                              human_budget=self.human_budget,
                              extra_demos=self.extra_demos, fm_calls=self.fm_calls)

@@ -1,9 +1,8 @@
-"""SOAR proxy: autonomous trajectory collection + VLM success labels; retrieve() is always empty; budget = robot-days / GPU hours.
+"""SOAR proxy: autonomous trajectory collection + VLM success labels; retrieve() always empty.
 
 Table: C2 | proxy | requires_training=True
+Budget = robot-days / GPU hours; differences live in the trained policy.
 Contract: docs/03 section 3.
-TODO(scaffold): implement the mechanism-equivalent behaviour described above;
-keep the MemoryPlugin signature and the six snapshot fields unchanged.
 """
 from __future__ import annotations
 
@@ -17,7 +16,7 @@ class SOARProxy:
     table = "C2"
 
     def __init__(self, **kwargs) -> None:
-        self.items: list[dict] = []
+        self.items: list[dict] = []   # VLM-labeled training trajectories
         self.fm_calls = 0
         self.human_budget = 0
         self.extra_demos = 0
@@ -25,19 +24,18 @@ class SOARProxy:
         self.config = kwargs
 
     def retrieve(self, ctx: SceneContext) -> list[RepairHint]:
-        # TODO(scaffold)
-        return []
+        return []  # always empty; the memory is internalised in the policy weights
 
     def on_episode_end(self, trace: Trace) -> None:
-        # TODO(scaffold)
-        return None
+        self.fm_calls += 1  # VLM success label
+        self.items.append({"task": trace.task,
+                           "success": bool(trace.success or not trace.error_code)})
 
     def on_step_end(self, feedback: StepFeedback) -> None:
-        # TODO(scaffold) or intentionally no-op
         return None
 
     def snapshot(self) -> dict:
-        return base_snapshot(library_size=len(self.items), verified=self.verified,
+        return base_snapshot(library_size=len(self.items), verified=0,
                              requires_training=True,
                              human_budget=self.human_budget,
-                             extra_demos=self.extra_demos, fm_calls=self.fm_calls)
+                             extra_demos=len(self.items), fm_calls=self.fm_calls)
