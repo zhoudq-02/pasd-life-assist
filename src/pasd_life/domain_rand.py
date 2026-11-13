@@ -31,9 +31,17 @@ def map_to_sim_params(q: dict[str, float], current: dict | None = None) -> dict:
 
 
 def update_from_real_gap(p: dict, sim_traces, real_traces, srcc: float) -> dict:
-    """Offline closed loop: adjust p by the sim/real trajectory discrepancy."""
-    # TODO(scaffold): real SRCC computation with paired trajectories, per-cluster
-    # reweighting of slip/occlusion/collision/recovery states, convergence test.
-    if srcc < 0.0:
-        return {k: (lo, hi * 1.1) for k, (lo, hi) in p.items()}
-    return dict(p)
+    """Offline closed loop: widen parameter ranges by the sim/real gap.
+
+    The gap combines the failure-distribution discrepancy (total variation) with the
+    calibration gap (1 - srcc). Offline only (CN122735765A boundary): this returns the
+    NEXT offline training distribution; it never mutates a policy or switches inference.
+    """
+    q_sim = failure_distribution(sim_traces)
+    q_real = failure_distribution(real_traces)
+    keys = set(q_sim) | set(q_real)
+    tv = 0.5 * sum(abs(q_sim.get(k, 0.0) - q_real.get(k, 0.0)) for k in keys)
+    gap = max(tv, max(0.0, 1.0 - float(srcc)))
+    if gap <= 0.0:
+        return {k: (lo, hi) for k, (lo, hi) in p.items()}
+    return {k: (lo, hi * (1.0 + gap)) for k, (lo, hi) in p.items()}
