@@ -1,4 +1,4 @@
-"""Task definitions. Contract: docs/02 section 1. TODO(scaffold): auto success + auto reset."""
+"""Task definitions. Contract: docs/02 section 1."""
 from __future__ import annotations
 
 TASKS = {
