@@ -1,0 +1,17 @@
+# table: A | B | C1 | C2 ; proxy: true means mechanism-equivalent, NOT a port.
+no_memory:          {table: A,  requires_training: false, proxy: false}
+trajectory_storage: {table: A,  requires_training: false, proxy: true}
+episodic_replay:    {table: A,  requires_training: false, proxy: true}
+pasd:               {table: A,  requires_training: false, proxy: false, gates: 2}
+pragmabot:          {table: A,  requires_training: false, proxy: true,  verified_by: none}
+tgl_skill:          {table: A,  requires_training: false, proxy: true,  verified_by: admission_check}
+pasd_full:          {table: A,  requires_training: false, proxy: false, gates: 3}
+reflexion:          {table: C1, requires_training: false, proxy: true}
+uniskill_proxy:     {table: C1, requires_training: false, proxy: true}
+irosa_interface:    {table: C1, requires_training: false, proxy: true, score_table: false}
+sss:                {table: C2, requires_training: true,  proxy: true, verified_by: vlm_judge}
+soar:               {table: C2, requires_training: true,  proxy: true, verified_by: vlm_judge}
+armada:             {table: C2, requires_training: true,  proxy: true, verified_by: human}
+neerl:              {table: C2, requires_training: true,  proxy: true}
+rlingua:            {table: C2, requires_training: true,  proxy: true}
+vla_proxy:          {table: C2, requires_training: true,  proxy: true}

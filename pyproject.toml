@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pasd-life-assist"
+version = "0.1.0"
+description = "Bounded, verified and safe experience distillation for assistive embodied agents"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# Core self-tests are stdlib-only. Every extra is OPTIONAL and must degrade
+# gracefully (try/except ImportError) - see CLAUDE.md section 7 and docs/08.
+sim = ["mujoco>=3.0", "numpy>=1.24"]
+# piper_sdk API/version must be verified on the target Linux host (docs/08 §6).
+robot = ["piper_sdk", "python-can"]
+agent = ["anthropic>=0.40"]
+dev = ["pytest>=7.4", "pyyaml>=6.0", "ruff>=0.5"]
+all = ["pasd-life-assist[sim,robot,agent,dev]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", ".", "integration"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

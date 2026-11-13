@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.doctor-tmp/
+
+# Secrets: .env is local, .env.example is the shipped template
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# 经验库、真机日志与实验原始产物不入库
+integration/pasd_library_runtime.*
+logs/
+runs/
+artifacts/
+*.pkl
+*.jsonl
+!integration/pasd_library.json
+
+# 真机标定与隐私数据
+configs/calibration.local.yaml
+data/real/
+*.bag
+*.mcap

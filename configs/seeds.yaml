@@ -1,0 +1,4 @@
+seeds: [0, 1, 2]
+episodes_per_method: 200
+rounds_per_instruction: 50
+instruction_counts: {simple: 7, implicit: 4, composed: 13}

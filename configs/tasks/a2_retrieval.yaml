@@ -1,0 +1,6 @@
+task: A2
+subgoals_file: tasks/retrieval.py
+ordered_state_check: true
+instructions: {simple: 7, implicit: 4, composed: 13}
+auto_success: true
+auto_reset: true

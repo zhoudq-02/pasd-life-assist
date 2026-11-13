@@ -1,0 +1,13 @@
+gate1:
+  cluster_radius: 0.45
+  threshold_strategy: margin    # observed | margin | quantized | split
+  identity: [stage, error_code, cluster_id]
+gate2:
+  repeats: 10
+  threshold: 0.80
+  require_fixes_match: true
+gate3:
+  consecutive_real_success: 8
+  require_first_human_confirmation: true
+  safety_envelope_veto: true
+states: [OBSERVED, CANDIDATE, VERIFIED, SAFE, REJECTED]

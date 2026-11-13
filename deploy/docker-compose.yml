@@ -1,0 +1,49 @@
+# Usage:
+#   docker compose --profile default up --build          # contract tests only
+#   docker compose run --rm pasd python3 scripts/run_smoke.py
+#   docker compose --profile real up --build             # device mapping ONLY,
+#       still no motion: real backend needs the three explicit confirmations
+#       in docs/08 section 6 and a verified SDK adapter.
+services:
+  pasd:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: pasd-life-assist:local
+    working_dir: /app
+    environment:
+      PASD_BACKEND: mock
+      PASD_SPLIT: dev
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PYTHONUTF8: "1"
+    volumes:
+      - ../runs:/state/runs
+      - ../logs:/state/logs
+      - ../artifacts:/state/artifacts
+    command: ["python3", "scripts/contract_tests.py"]
+
+  pasd-real:
+    profiles: ["real"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: pasd-life-assist:local
+    working_dir: /app
+    network_mode: host          # SocketCAN visibility
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "${PASD_SERIAL_DEVICE:-/dev/ttyUSB0}:${PASD_SERIAL_DEVICE:-/dev/ttyUSB0}"
+    environment:
+      PASD_BACKEND: mock        # deliberately NOT real; change only after docs/08 checklist
+      PASD_CAN_INTERFACE: "${PASD_CAN_INTERFACE:-can0}"
+      PASD_SERIAL_DEVICE: "${PASD_SERIAL_DEVICE:-/dev/ttyUSB0}"
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PYTHONUTF8: "1"
+    volumes:
+      - ../runs:/state/runs
+      - ../logs:/state/logs
+      - ../artifacts:/state/artifacts
+    command: ["python3", "deploy/doctor.py"]

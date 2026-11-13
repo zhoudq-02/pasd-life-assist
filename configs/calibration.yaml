@@ -1,0 +1,5 @@
+# Friction / grip force are the largest sim uncertainty. Calibrate on real arm:
+# gradually lower grip force until slip, then freeze these values for ALL baselines.
+finger_friction: null
+grip_force_limit_n: null
+reset_procedure: "scripts/reset_scene.py"

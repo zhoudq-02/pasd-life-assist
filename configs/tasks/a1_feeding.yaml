@@ -1,0 +1,7 @@
+task: A1
+subgoals_file: tasks/feeding.py
+safety_envelope: {min_human_dist: 0.25, eef_speed: 0.15, contact_force: 10.0, food_temp: 45.0}
+instructions: {simple: 7, implicit: 4, composed: 13}
+auto_success: true
+auto_reset: true
+human_proxy: "fake head model"    # real users only after E4 Gate3 ablation

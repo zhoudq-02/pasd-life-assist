@@ -1,0 +1,21 @@
+# Optional oneshot unit: OFFLINE contract tests only. Never auto-start real hardware.
+#   sudo cp deploy/systemd/pasd-contract-tests.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl start pasd-contract-tests.service
+# Adjust User/WorkingDirectory to the account that owns the repository.
+[Unit]
+Description=PASD-Life-Assist offline contract tests (no hardware)
+After=network.target
+
+[Service]
+Type=oneshot
+User=pasd
+WorkingDirectory=/opt/pasd-life-assist
+Environment=LANG=C.UTF-8
+Environment=LC_ALL=C.UTF-8
+Environment=PYTHONUTF8=1
+Environment=PASD_BACKEND=mock
+ExecStart=/usr/bin/python3 scripts/contract_tests.py
+
+[Install]
+WantedBy=multi-user.target

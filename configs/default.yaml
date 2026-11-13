@@ -1,0 +1,8 @@
+platform:
+  robot: "AgileX PiPER 6-DoF"
+  simulator: "MuJoCo"
+  agent: "Claude Code (code-as-policy)"
+  backend: "mock"            # mock | mujoco | real
+split: dev                   # dev | heldout
+max_steps: 30
+seed: 0
