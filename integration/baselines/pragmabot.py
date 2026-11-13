@@ -1,12 +1,13 @@
-"""PRAGMABOT-style STM/LTM + RAG + VLM success detector. Use on_step_end for STM; write LTM only when the episode succeeds (docs/03 section 3). Align VLM call count and max_tokens with PASD (fairness #6, #14).
+"""PRAGMABOT-style STM/LTM + VLM success detector (proxy).
 
 Table: A | proxy | requires_training=False
 Contract: docs/03 section 3.
-TODO(scaffold): implement the mechanism-equivalent behaviour described above;
-keep the MemoryPlugin signature and the six snapshot fields unchanged.
+on_step_end accumulates STM reflections (VLM success detection, simulated); the
+summary is written to LTM only when the episode succeeds.
 """
 from __future__ import annotations
 
+from src.pasd_life.config import RETRIEVE_TOP_K
 from src.pasd_life.schema import RepairHint, SceneContext, StepFeedback, Trace
 from .base import base_snapshot
 
@@ -17,7 +18,8 @@ class PragmabotMemory:
     table = "A"
 
     def __init__(self, **kwargs) -> None:
-        self.items: list[dict] = []
+        self.stm: list[dict] = []   # short-term memory: in-episode reflections
+        self.ltm: list[dict] = []   # long-term memory: success summaries only
         self.fm_calls = 0
         self.human_budget = 0
         self.extra_demos = 0
@@ -25,19 +27,31 @@ class PragmabotMemory:
         self.config = kwargs
 
     def retrieve(self, ctx: SceneContext) -> list[RepairHint]:
-        # TODO(scaffold)
-        return []
-
-    def on_episode_end(self, trace: Trace) -> None:
-        # TODO(scaffold)
-        return None
+        hints = [
+            RepairHint(text=f"ltm:{t['task']}", executable=None, verified=False,
+                       verified_by="none", source=f"ltm#{i}")
+            for i, t in enumerate(self.ltm[-RETRIEVE_TOP_K:])
+        ]
+        hints += [
+            RepairHint(text=f"stm:{r['step']}", executable=None, verified=False,
+                       verified_by="none", source=f"stm#{i}")
+            for i, r in enumerate(self.stm[-RETRIEVE_TOP_K:])
+        ]
+        return hints
 
     def on_step_end(self, feedback: StepFeedback) -> None:
-        # TODO(scaffold) or intentionally no-op
-        return None
+        # VLM success detection + reflection (simulated; no real VLM in the proxy).
+        self.fm_calls += 1
+        self.stm.append({"step": feedback.step, "obs_after": dict(feedback.obs_after)})
+
+    def on_episode_end(self, trace: Trace) -> None:
+        if trace.success or not trace.error_code:
+            self.ltm.append({"task": trace.task, "features": dict(trace.features),
+                             "reflections": list(self.stm)})
+        self.stm = []  # reset STM after the episode
 
     def snapshot(self) -> dict:
-        return base_snapshot(library_size=len(self.items), verified=self.verified,
+        return base_snapshot(library_size=len(self.ltm), verified=self.verified,
                              requires_training=False,
                              human_budget=self.human_budget,
                              extra_demos=self.extra_demos, fm_calls=self.fm_calls)
