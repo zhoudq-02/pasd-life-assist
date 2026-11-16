@@ -64,12 +64,11 @@ class PiperSDKAdapter(NullAdapter):
                 "then check CAN with deploy/setup_can.sh and the udev rule."
             ) from exc
         raise BackendUnavailable(
-            "piper_sdk is present but the API mapping is NOT verified. On the target "
-            "machine confirm: (1) interface class & connect method, (2) joint/pose "
-            "units (m vs mm, rad vs deg), (3) gripper width conversion, "
-            "(4) state/feedback topic names, (5) enable/disable & e-stop call, "
-            "(6) control frequency. Then implement PiperSDKAdapter and keep the "
-            "SI-unit contract of RobotAPI."
+            "piper_sdk is present but NOT yet verified on a live arm. SDK source "
+            "(v0.6.1) gives: C_PiperInterface_V2.ConnectPort() / EnablePiper() / "
+            "JointCtrl (0.001 deg) / GripperCtrl (0.001 mm) / EmergencyStop(0x01) — "
+            "see docs/09 for the full 6-item checklist and the minimal adapter mapping. "
+            "Verify each on the CAN arm before wiring PiperSDKAdapter (SI-unit contract)."
         )
 
 
