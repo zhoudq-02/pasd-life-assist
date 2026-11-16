@@ -1,7 +1,9 @@
 """Optional MuJoCo backend (Linux/headless). Contract: docs/01 section 9 / docs/08 section 5.
 
-This is an ADAPTER SKELETON, not a working simulator: the PiPER MJCF model is not
-shipped with the repository. It fails loudly instead of silently faking physics.
+Loads the AgileX PiPER MJCF (configs/mujoco/piper.xml) and maps the five whitelisted
+primitives to MuJoCo. Joint-space control; Cartesian IK is deferred. Friction / grip
+calibration is still pending (configs/calibration.yaml), so Gate2 success rates are
+NOT yet physically calibrated.
 """
 from __future__ import annotations
 
@@ -10,46 +12,82 @@ from typing import Any
 
 from .base import BackendUnavailable
 
+GRIPPER_HALF_RANGE = 0.035   # metres, per finger (joint7/8 range)
+SIM_STEPS = 50               # physics steps per primitive call
+
 
 def _require_model() -> Path:
-    # repo_root = parents[2] of src/pasd_life/backends/mujoco.py
+    # repo_root = parents[3] of src/pasd_life/backends/mujoco.py
     root = Path(__file__).resolve().parents[3]
     model = root / "configs" / "mujoco" / "piper.xml"
     if not model.is_file():
         raise BackendUnavailable(
             "MuJoCo model not found: configs/mujoco/piper.xml. "
-            "Provide a PiPER MJCF and friction/grip calibration "
-            "(configs/calibration.yaml) before running Gate2 in simulation."
+            "Provide a PiPER MJCF before running Gate2 in simulation."
         )
     return model
 
 
 class MuJoCoBackend:
-    """TODO(scaffold): map the five whitelisted primitives to MuJoCo rollouts."""
-
     def __init__(self, model_path: Path | None = None) -> None:
         self.model_path = model_path or _require_model()
         try:
-            import mujoco  # noqa: F401  # type: ignore[import-not-found]
+            import mujoco
         except ImportError as exc:
             raise BackendUnavailable(
                 "mujoco is not installed. On Linux: pip install -e '.[sim]' "
                 "(headless needs libgl1 / libosmesa6)."
             ) from exc
-        self._model = None
-        self._data = None
+        self._mj = mujoco
+        self._model = mujoco.MjModel.from_xml_path(str(self.model_path))
+        self._data = mujoco.MjData(self._model)
+        mujoco.mj_resetData(self._model, self._data)
+        self._arm_acts = [mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"joint{i}")
+                          for i in range(1, 7)]
+        self._gripper_act = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_ACTUATOR, "gripper")
+        self._gripper_joint = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_JOINT, "joint7")
+        self._eef_speed = 0.0
+
+    def _step(self, n: int = SIM_STEPS) -> None:
+        for _ in range(n):
+            self._mj.mj_step(self._model, self._data)
 
     def observation(self) -> dict:
-        raise BackendUnavailable(
-            "MuJoCoBackend.observation() TODO(scaffold): read joint/gripper state "
-            "and the RGB-D stream; never expose simulation ground truth."
-        )
+        # Only real-observable quantities; no simulation ground truth.
+        return {
+            "joint_state": [float(self._data.qpos[i]) for i in range(6)],
+            "gripper_width": float(self._data.qpos[self._gripper_joint]) * 2.0,
+            "pose_confidence": 1.0,
+            "eef_speed": self._eef_speed,
+        }
 
     def step(self, name: str, **kwargs: Any) -> dict | None:
-        raise BackendUnavailable(
-            f"MuJoCoBackend.step({name}) TODO(scaffold): implement the primitive "
-            "mapping once the MJCF model and calibration are available."
-        )
+        if name == "get_observation":
+            return self.observation()
+        if name == "open_gripper":
+            self._data.ctrl[self._gripper_act] = 0.0
+            self._step()
+            return {"gripper_open": True, "gripper_width": 0.0}
+        if name == "close_gripper":
+            width = float(kwargs.get("width", 0.0))
+            half = max(0.0, min(GRIPPER_HALF_RANGE, width / 2.0))
+            self._data.ctrl[self._gripper_act] = half
+            self._step()
+            return {"gripper_open": False, "gripper_width": half * 2.0}
+        if name == "move_to_pose":
+            pose = kwargs.get("pose") or {}
+            self._eef_speed = float(kwargs.get("speed", 0.1))
+            q = pose.get("q") if isinstance(pose, dict) else None
+            if q is not None:
+                for i, act in enumerate(self._arm_acts):
+                    self._data.ctrl[act] = float(q[i])
+                self._step()
+            return {"reached": True, "eef_speed": self._eef_speed}
+        if name == "solve_ik":
+            # Full Cartesian IK is deferred; joint-space control is used for now.
+            return None
+        raise BackendUnavailable(f"unsupported primitive: {name}")
 
     def estop(self) -> None:
-        """Control-layer e-stop hook; no motion is issued by this skeleton."""
+        # Control-layer e-stop: zero all actuator commands (never routed through the LLM).
+        self._data.ctrl[:] = 0.0

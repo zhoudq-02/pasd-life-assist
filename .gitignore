@@ -30,3 +30,6 @@ configs/calibration.local.yaml
 data/real/
 *.bag
 *.mcap
+
+# 第三方 vendored 仓库（模型已拷贝到 configs/mujoco/）
+agilex_arm_mujoco/
