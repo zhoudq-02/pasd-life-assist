@@ -1,0 +1,19 @@
+<mujoco model="piper_grasp_scene">
+  <include file="piper.xml"/>
+
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+
+  <worldbody>
+    <!-- table top surface at z = 0.32 -->
+    <body name="table" pos="0.5 0 0.30">
+      <geom name="table_top" type="box" size="0.25 0.25 0.02" rgba="0.45 0.32 0.22 1"/>
+    </body>
+
+    <!-- slender rod (aspect ratio ~10:1), axis along X, free body -->
+    <body name="rod" pos="0.5 0 0.36">
+      <freejoint/>
+      <geom name="rod_geom" type="cylinder" size="0.008 0.08" quat="0.7071 0 0.7071 0"
+            mass="0.05" rgba="0.85 0.2 0.2 1" friction="0.5 0.01 0.01"/>
+    </body>
+  </worldbody>
+</mujoco>

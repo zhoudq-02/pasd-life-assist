@@ -91,3 +91,53 @@ class MuJoCoBackend:
     def estop(self) -> None:
         # Control-layer e-stop: zero all actuator commands (never routed through the LLM).
         self._data.ctrl[:] = 0.0
+
+
+class MuJoCoSimRunner:
+    """Gate2 grasp simulation over the MuJoCo scene (WIP — needs visual tuning).
+
+    Loads configs/mujoco/scene_grasp.xml (arm + table + slender rod) and runs a
+    grasp attempt; success = the target rod is still held after lifting. The
+    grasp geometry, IK convergence and friction are NOT yet tuned for the
+    GRASP_SLIP physics — verify on a display before trusting the results.
+    """
+
+    def __init__(self, scene_path: Path | None = None) -> None:
+        root = Path(__file__).resolve().parents[3]
+        self._scene = scene_path or root / "configs" / "mujoco" / "scene_grasp.xml"
+        if not Path(self._scene).is_file():
+            raise BackendUnavailable(f"scene not found: {self._scene}")
+        try:
+            import mujoco
+        except ImportError as exc:
+            raise BackendUnavailable("mujoco is not installed: pip install -e '.[sim]'") from exc
+        self._mj = mujoco
+        self._model = mujoco.MjModel.from_xml_path(str(self._scene))
+        self._data = mujoco.MjData(self._model)
+        self._home = [0.0, 1.57, -1.3485, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self._gripper_act = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_ACTUATOR, "gripper")
+        self._rod = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_BODY, "rod")
+
+    def run(self, skill) -> bool:
+        """Run one grasp attempt and report whether the rod is held (physics-based).
+
+        WIP: the rod placement / grasp pose / friction need visual tuning; this is
+        the mechanism, not a calibrated GRASP_SLIP detector.
+        """
+        mj, model, d = self._mj, self._model, self._data
+        mj.mj_resetData(model, d)
+        d.qpos[:8] = self._home
+        d.qvel[:] = 0.0
+        # open the gripper, then close to the rod width, then lift
+        d.ctrl[self._gripper_act] = 0.035
+        for _ in range(200):
+            mj.mj_step(model, d)
+        d.ctrl[self._gripper_act] = 0.008
+        for _ in range(300):
+            mj.mj_step(model, d)
+        # lift: raise the elbow (joint2) a little
+        arm_act1 = mj.mj_name2id(model, mj.mjtObj.mjOBJ_ACTUATOR, "joint2")
+        d.ctrl[arm_act1] = self._home[1] + 0.25
+        for _ in range(500):
+            mj.mj_step(model, d)
+        return float(d.xpos[self._rod][2]) > 0.34

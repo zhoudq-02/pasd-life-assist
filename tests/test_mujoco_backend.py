@@ -33,5 +33,20 @@ class TestMuJoCoBackend(unittest.TestCase):
         self.assertIsNone(self._backend.step("solve_ik", target_pose=[0.3, 0.0, 0.15]))
 
 
+class TestMuJoCoSimRunner(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from src.pasd_life.backends.mujoco import MuJoCoSimRunner
+            cls._runner = MuJoCoSimRunner()
+        except BackendUnavailable as exc:
+            raise unittest.SkipTest(f"mujoco/model unavailable: {exc}")
+
+    def test_run_returns_bool(self):
+        skill = type("Skill", (), {"repair": {"approach": "top"}})()
+        result = self._runner.run(skill)
+        self.assertIsInstance(result, bool)
+
+
 if __name__ == "__main__":
     unittest.main()
