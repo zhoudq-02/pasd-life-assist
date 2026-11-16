@@ -31,5 +31,6 @@ data/real/
 *.bag
 *.mcap
 
-# 第三方 vendored 仓库（模型已拷贝到 configs/mujoco/）
-agilex_arm_mujoco/
+# 第三方 vendored 仓库
+agilex_arm_mujoco/                  # 模型已拷贝到 configs/mujoco/
+YOLO_World-SAM-GraspNet/            # 感知流水线（含 GB 级模型权重，需 GPU 单独装）
